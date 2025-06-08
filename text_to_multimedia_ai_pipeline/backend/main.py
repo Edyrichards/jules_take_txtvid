@@ -5,7 +5,7 @@ from PIL import Image # For dummy image
 import io
 from fastapi.responses import FileResponse # Required for returning files
 import cv2 # For OpenCV
-import shutil # For file operations (though not used in Option B directly)
+import shutil # For file operations
 import wave # For placeholder speech/music/sfx audio
 
 app = FastAPI()
@@ -170,7 +170,6 @@ async def generate_music(request: MusicRequest):
         "duration_seconds": duration
     }
 
-# --- Sound Effects (SFX) Generation ---
 class SFXRequest(BaseModel):
     category: str
     description: str
@@ -181,24 +180,16 @@ os.makedirs(GENERATED_AUDIO_SFX_DIR_SERVER, exist_ok=True)
 @app.post("/generate-sfx")
 async def generate_sfx(request: SFXRequest):
     print(f"Received SFX request: category='{request.category}', description='{request.description[:50]}...'")
-
-    # --- AudioLDM / MLX or Library Lookup Placeholder ---
-    # TODO: Load AudioLDM model or implement SFX library lookup
-    # For now, creating a short placeholder silent WAV file:
     output_filename = "placeholder_sfx.wav"
     output_path_server = os.path.join(GENERATED_AUDIO_SFX_DIR_SERVER, output_filename)
-    output_path_client = os.path.join("data/generated_audio/sfx", output_filename) # Relative path for client
-
-    sfx_duration = 0.5 # seconds
-
+    output_path_client = os.path.join("data/generated_audio/sfx", output_filename)
+    sfx_duration = 0.5
     try:
         with wave.open(output_path_server, 'wb') as wf:
-            wf.setnchannels(1)  # Mono
-            wf.setsampwidth(2)  # 16-bit
-            wf.setframerate(44100)  # CD quality
-            # Calculate total frames for the given duration
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
             num_frames_sfx = int(44100 * sfx_duration)
-            # Create silent frame data
             silent_frame_sfx = b'\x00\x00'
             frames_data_sfx = silent_frame_sfx * num_frames_sfx
             wf.writeframes(frames_data_sfx)
@@ -207,11 +198,95 @@ async def generate_sfx(request: SFXRequest):
     except Exception as e:
         print(f"Error generating placeholder SFX audio: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create placeholder SFX audio: {str(e)}")
-    # --- End of SFX Placeholder ---
-
     return {
         "message": "SFX generated successfully (placeholder)",
         "audio_path": output_path_client,
         "category_used": request.category,
         "description_logged": request.description
     }
+
+class LipSyncRequest(BaseModel):
+    video_path: str
+    audio_path: str
+
+GENERATED_VIDEOS_LIPSYNCED_DIR_SERVER = os.path.join(PROJECT_ROOT_DIR, "data/generated_videos/lipsynced")
+os.makedirs(GENERATED_VIDEOS_LIPSYNCED_DIR_SERVER, exist_ok=True)
+
+@app.post("/sync-lips")
+async def sync_lips(request: LipSyncRequest):
+    print(f"Received lip sync request for video: '{request.video_path}' and audio: '{request.audio_path}'")
+    actual_video_path_server = os.path.join(PROJECT_ROOT_DIR, request.video_path)
+    actual_audio_path_server = os.path.join(PROJECT_ROOT_DIR, request.audio_path)
+    if not os.path.exists(actual_video_path_server):
+        raise HTTPException(status_code=404, detail=f"Input video not found: {request.video_path}")
+    if not os.path.exists(actual_audio_path_server):
+        raise HTTPException(status_code=404, detail=f"Input audio not found: {request.audio_path}")
+    try:
+        base_video_name = os.path.basename(request.video_path)
+        name_part, ext_part = os.path.splitext(base_video_name)
+        output_filename = f"{name_part}_lipsynced{ext_part}"
+        output_path_server = os.path.join(GENERATED_VIDEOS_LIPSYNCED_DIR_SERVER, output_filename)
+        output_path_client = os.path.join("data/generated_videos/lipsynced", output_filename)
+        shutil.copy(actual_video_path_server, output_path_server)
+        print(f"Placeholder lip-synced video (copied) saved to {output_path_server}")
+    except Exception as e:
+        print(f"Error during placeholder lip sync (copying video): {e}")
+        raise HTTPException(status_code=500, detail=f"Failed placeholder lip sync: {str(e)}")
+    return {
+        "message": "Lip sync applied successfully (placeholder)",
+        "lipsynced_video_path": output_path_client
+    }
+
+# --- Conceptual Audio Synchronization and Final Assembly Notes ---
+# This section outlines how various audio tracks (speech, music, SFX) would be
+# combined with the video, typically after lip synchronization.
+# Actual implementation would likely occur in a dedicated "final assembly" service (Phase 6).
+
+# def conceptual_final_audio_video_mix(video_path: str, speech_audio_path: str, music_audio_path: str = None, sfx_audio_paths: list = None):
+#     '''
+#     Conceptual function to mix all audio tracks and combine with video.
+#     Inputs:
+#         video_path: Path to the video (e.g., after lip sync).
+#         speech_audio_path: Path to the primary speech audio.
+#         music_audio_path: Path to the background music, if any.
+#         sfx_audio_paths: List of paths to sound effects, potentially with timing info.
+#     '''
+#
+#     print(f"CONCEPTUAL: Starting final assembly for video: {video_path}")
+#     print(f"CONCEPTUAL: Speech track: {speech_audio_path}")
+#     if music_audio_path:
+#         print(f"CONCEPTUAL: Music track: {music_audio_path}")
+#     if sfx_audio_paths:
+#         print(f"CONCEPTUAL: SFX tracks: {sfx_audio_paths}")
+
+#     # 1. Timing and Alignment:
+#     #    - Speech is already aligned with video via lip sync (Wav2Lip).
+#     #    - Music might have a specified start time or fade-in/out points.
+#     #    - SFX would need timing information (e.g., "play 'door_slam.wav' at 3.5 seconds").
+#     #      This timing could come from user input or automated analysis (future).
+
+#     # 2. Audio Track Mixing:
+#     #    - Load all audio tracks (speech, music, SFX).
+#     #    - Adjust volumes:
+#     #        - Speech should be clear (primary).
+#     #        - Music volume might be lowered during speech (ducking/sidechaining).
+#     #        - SFX volumes set appropriately.
+#     #    - Combine all audio tracks into a single master audio track.
+#     #    - Libraries like `pydub` or `moviepy.editor.AudioFileClip` could be used.
+
+#     # 3. Combining Master Audio with Video:
+#     #    - Replace the original audio of the lip-synced video (if any) with the new master audio track.
+#     #    - Ensure the master audio track duration matches the video duration, possibly by padding silence
+#     #      or truncating, depending on the content.
+#     #    - FFmpeg is a powerful command-line tool for this (e.g., `ffmpeg -i video.mp4 -i master_audio.wav -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 final_video.mp4`).
+#     #    - `moviepy.editor.VideoFileClip` and `.set_audio()` method can also be used.
+
+#     # 4. Output:
+#     #    - The result would be the final video with all audio elements mixed and synchronized.
+#     #    - This would be saved to a new path, e.g., data/final_videos/final_video_001.mp4
+
+#     # Placeholder: For now, this is purely conceptual.
+#     # The actual final video path would be returned.
+#     pass
+
+# End of conceptual notes

@@ -16,6 +16,8 @@ if 'generated_music_path' not in st.session_state:
     st.session_state.generated_music_path = None
 if 'generated_sfx_path' not in st.session_state:
     st.session_state.generated_sfx_path = None
+if 'lipsynced_video_path' not in st.session_state:
+    st.session_state.lipsynced_video_path = None
 
 # --- Backend Status (existing code) ---
 st.header("Backend Status")
@@ -33,6 +35,25 @@ except Exception as e:
     st.error(f"An error occurred during health check: {e}")
 
 PROJECT_BASE_PATH_FOR_FILES = "text_to_multimedia_ai_pipeline"
+
+def reset_downstream_media():
+    st.session_state.generated_video_path = None
+    st.session_state.generated_speech_path = None
+    st.session_state.generated_music_path = None
+    st.session_state.generated_sfx_path = None
+    st.session_state.lipsynced_video_path = None
+
+def reset_audio_media():
+    st.session_state.generated_speech_path = None
+    st.session_state.generated_music_path = None
+    st.session_state.generated_sfx_path = None
+    st.session_state.lipsynced_video_path = None # Lip sync depends on speech
+
+def reset_music_sfx_lipsync():
+    st.session_state.generated_music_path = None
+    st.session_state.generated_sfx_path = None
+    st.session_state.lipsynced_video_path = None
+
 
 # --- Image Generation Section ---
 st.header("Generate Image")
@@ -58,10 +79,7 @@ if st.button("Generate Image"):
                             st.image(path_for_os_exists, caption=f"Generated image for: {final_prompt_img[:70]}...")
                             st.success(data.get("message", "Image generated!"))
                             st.session_state.generated_image_path = image_path_relative_to_project
-                            st.session_state.generated_video_path = None
-                            st.session_state.generated_speech_path = None
-                            st.session_state.generated_music_path = None
-                            st.session_state.generated_sfx_path = None # Reset SFX path
+                            reset_downstream_media()
                         else:
                             st.error(f"Image file not found by frontend at path: {path_for_os_exists}")
                     else:
@@ -94,9 +112,7 @@ if st.session_state.generated_image_path:
                         path_for_os_exists_video = os.path.join(PROJECT_BASE_PATH_FOR_FILES, video_path_relative_to_project)
                         if os.path.exists(path_for_os_exists_video):
                             st.session_state.generated_video_path = video_path_relative_to_project
-                            st.session_state.generated_speech_path = None
-                            st.session_state.generated_music_path = None
-                            st.session_state.generated_sfx_path = None # Reset SFX path
+                            reset_audio_media()
                             st.video(path_for_os_exists_video)
                             st.success(video_data.get("message", "Video generated!"))
                         else:
@@ -133,8 +149,7 @@ if st.button("Generate Speech"):
                         path_for_os_exists_speech = os.path.join(PROJECT_BASE_PATH_FOR_FILES, speech_path_relative_to_project)
                         if os.path.exists(path_for_os_exists_speech):
                             st.session_state.generated_speech_path = speech_path_relative_to_project
-                            st.session_state.generated_music_path = None
-                            st.session_state.generated_sfx_path = None # Reset SFX path
+                            reset_music_sfx_lipsync()
                             st.audio(path_for_os_exists_speech, format='audio/wav')
                             st.success(speech_data.get("message", "Speech generated!"))
                             st.caption(f"Voice: {speech_data.get('voice_used', 'N/A')}, Emotion: {speech_data.get('emotion_used', 'N/A')}")
@@ -169,7 +184,8 @@ if st.button("Generate Music"):
                     path_for_os_exists_music = os.path.join(PROJECT_BASE_PATH_FOR_FILES, music_path_relative_to_project)
                     if os.path.exists(path_for_os_exists_music):
                         st.session_state.generated_music_path = music_path_relative_to_project
-                        st.session_state.generated_sfx_path = None # Reset SFX path
+                        st.session_state.generated_sfx_path = None
+                        st.session_state.lipsynced_video_path = None # Lip sync might be affected by new music if used in final assembly
                         st.audio(path_for_os_exists_music, format='audio/wav')
                         st.success(music_data.get("message", "Music generated!"))
                         st.caption(f"Style: {music_data.get('style_used', 'N/A')}, Duration: {music_data.get('duration_seconds', 'N/A')}s")
@@ -191,28 +207,25 @@ sfx_selected_category = st.selectbox("Select SFX Category:", sfx_category_option
 sfx_description_input = st.text_input("Describe the sound effect:", key="sfx_description_input")
 st.caption("Note: A pre-generated SFX library will also be available for common sounds.")
 backend_url_generate_sfx = "http://localhost:8000/generate-sfx"
-
 if st.button("Generate SFX"):
     if sfx_description_input:
         with st.spinner("Generating SFX..."):
             try:
                 payload = {"category": sfx_selected_category, "description": sfx_description_input}
                 response_generate_sfx = requests.post(backend_url_generate_sfx, json=payload)
-
                 if response_generate_sfx.status_code == 200:
                     sfx_data = response_generate_sfx.json()
                     sfx_path_relative_to_project = sfx_data.get("audio_path")
-
                     if sfx_path_relative_to_project:
                         path_for_os_exists_sfx = os.path.join(PROJECT_BASE_PATH_FOR_FILES, sfx_path_relative_to_project)
                         if os.path.exists(path_for_os_exists_sfx):
                             st.session_state.generated_sfx_path = sfx_path_relative_to_project
+                            st.session_state.lipsynced_video_path = None # Lip sync not directly affected, but good practice if sfx were part of a scene mix
                             st.audio(path_for_os_exists_sfx, format='audio/wav')
                             st.success(sfx_data.get("message", "SFX generated!"))
                             st.caption(f"Category: {sfx_data.get('category_used', 'N/A')}, Description: {sfx_data.get('description_logged', 'N/A')}")
                         else:
                             st.error(f"SFX audio file not found by frontend at: {path_for_os_exists_sfx}")
-                            st.info(f"Backend returned: {sfx_path_relative_to_project}. Backend response: {sfx_data}")
                     else:
                         st.error("Backend did not return an SFX audio path.")
                 else:
@@ -223,3 +236,43 @@ if st.button("Generate SFX"):
                 st.error(f"Unexpected error during SFX generation: {e}")
     else:
         st.warning("Please describe the sound effect.")
+
+# --- Lip Sync Video Section ---
+st.header("Lip Sync Video")
+if st.session_state.generated_video_path and st.session_state.generated_speech_path:
+    st.write(f"Applying Lip Sync to video: `{st.session_state.generated_video_path}`")
+    st.write(f"Using speech audio: `{st.session_state.generated_speech_path}`")
+
+    if st.button("Apply Lip Sync"):
+        backend_url_sync_lips = "http://localhost:8000/sync-lips"
+        with st.spinner("Applying lip sync..."):
+            try:
+                payload = {
+                    "video_path": st.session_state.generated_video_path,
+                    "audio_path": st.session_state.generated_speech_path
+                }
+                response_sync_lips = requests.post(backend_url_sync_lips, json=payload)
+
+                if response_sync_lips.status_code == 200:
+                    lipsync_data = response_sync_lips.json()
+                    lipsynced_video_path_relative = lipsync_data.get("lipsynced_video_path")
+
+                    if lipsynced_video_path_relative:
+                        path_for_os_exists_lipsync = os.path.join(PROJECT_BASE_PATH_FOR_FILES, lipsynced_video_path_relative)
+                        if os.path.exists(path_for_os_exists_lipsync):
+                            st.session_state.lipsynced_video_path = lipsynced_video_path_relative
+                            st.video(path_for_os_exists_lipsync)
+                            st.success(lipsync_data.get("message", "Lip sync applied!"))
+                        else:
+                            st.error(f"Lipsynced video file not found by frontend at: {path_for_os_exists_lipsync}")
+                            st.info(f"Backend returned: {lipsynced_video_path_relative}. Backend response: {lipsync_data}")
+                    else:
+                        st.error("Backend did not return a lipsynced video path.")
+                else:
+                    st.error(f"Failed to apply lip sync. Backend responded: {response_sync_lips.status_code} - {response_sync_lips.text}")
+            except requests.exceptions.ConnectionError:
+                st.error(f"Failed to connect to the lip sync backend at {backend_url_sync_lips}.")
+            except Exception as e:
+                st.error(f"An unexpected error occurred during lip sync: {e}")
+else:
+    st.info("Please generate a video and speech audio first to enable lip sync.")
