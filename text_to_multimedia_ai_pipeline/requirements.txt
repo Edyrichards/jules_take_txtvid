@@ -6,3 +6,4 @@ mlx
 Pillow
 python-multipart
 pytest
+opencv-python
