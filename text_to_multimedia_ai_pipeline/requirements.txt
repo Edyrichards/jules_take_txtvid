@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+streamlit
+requests
+mlx
+Pillow
+python-multipart
+pytest
+opencv-python
+numpy
