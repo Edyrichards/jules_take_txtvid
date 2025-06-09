@@ -12,7 +12,7 @@ Think of it as your creative assistant: you provide the text, and it helps you b
 
 *   **The User Interface is Complete:** You can click through all the steps, input text, make selections, and see how the final application is intended to work.
 *   **Backend Processes are Placeholders:** The actual Artificial Intelligence (AI) models for generating images, videos, audio, etc., are **not yet integrated**. When you click "Generate," the system currently creates quick placeholder files (like blue squares for images or silent audio files) to simulate the process.
-    (Note: The backend code for Text-to-Image generation has been structured to use MLX with Stable Diffusion, but requires user setup of model files and replacement of placeholder model utility code. See 'Future Development / 1. Text-to-Image Generation (MLX Stable Diffusion) - Partially Scaffolded' for details.)
+    (Note: The backend code for Text-to-Image and Image-to-Video generation has been structured to use MLX with Stable Diffusion and AnimateDiff concepts, respectively. However, both require user setup of model files and replacement of placeholder model utility code. See 'Future Development' section for details.)
 *   **Focus on Workflow and UI:** The main purpose of this prototype is to demonstrate the complete workflow and user interface of the pipeline.
 
 This allows you to understand the entire process and how you would interact with the tool once the AI models are connected.
@@ -98,7 +98,7 @@ The application guides you through a wizard-like interface. Here's how to naviga
 ## What to Expect (Placeholder Outputs)
 
 *   **Images:** The Text-to-Image step now uses a **placeholder MLX Stable Diffusion pipeline**. If model files are not correctly set up as per `models/stable_diffusion_mlx/README.md` and `backend/mlx_utils.py` is not replaced with actual model logic, it will likely fail or produce random noise if the placeholder `mlx_utils.py` somehow runs. With correct (placeholder) `mlx_utils.py` but no real models, it produces a random noise image.
-*   **Videos:** Will be short video clips of the static placeholder images, or copies of previous placeholder videos.
+*   **Videos:** The Image-to-Video step now uses a **placeholder MLX AnimateDiff-style pipeline**. Similar to image generation, if model files (especially the Motion Module) are not set up as per `models/animate_diff_mlx/README.md` and `backend/mlx_animate_diff_utils.py` is not implemented with real logic, it will produce placeholder output (random noise frames compiled into a video).
 *   **Audio (Speech, Music, SFX):** Will be silent audio files of appropriate (placeholder) durations.
 *   **Lip Sync:** Will simply show the input video again, as no actual lip movement is generated.
 *   **Final Assembly:** Will show the video from the lip sync stage again.
@@ -118,9 +118,14 @@ The exciting part comes next: integrating real AI models and functionality!
     *   **Critical: Implement `mlx_utils.py`:** The file `backend/mlx_utils.py` currently contains **placeholder classes** for the UNet, VAE, Text Encoder, Tokenizer, and Scheduler. **You MUST replace the content of `mlx_utils.py` with the actual Python class definitions and weight loading logic for these components from a working MLX Stable Diffusion example (e.g., from the official `mlx-examples` repository on GitHub).** The existing placeholders only simulate the structure and will not produce valid images without real model code and weights.
 *   **Dependencies:** The `requirements.txt` file has been updated with `mlx`, `huggingface_hub`, `transformers`, and `safetensors` to support this.
 
-### 2. Image-to-Video Generation (e.g., AnimateDiff + MLX)
-*   Integrate a real image-to-video model (like AnimateDiff or Stable Video Diffusion) using MLX into the `/generate-video` backend endpoint.
-*   This will involve replacing the current OpenCV placeholder.
+### 2. Image-to-Video Generation (e.g., AnimateDiff + MLX) - Partially Scaffolded
+*   **Current Status:** The backend framework to use an MLX-based AnimateDiff-style pipeline for image-to-video generation (Phase 3) has been implemented. This pipeline generates a sequence of frames from an input image and a prompt, and then compiles these frames into an MP4 video.
+    *   Configuration is managed in `backend/config_i2v.py`.
+    *   The main generation pipeline logic (frame generation and video compilation via OpenCV) is in `backend/mlx_image_to_video.py`. It reuses components (like VAE, Text Encoder, UNet - all placeholders) from the Stable Diffusion setup.
+*   **Action Required by User:**
+    *   **Model Files:** You need to download or convert an AnimateDiff Motion Module compatible with MLX and your base Stable Diffusion model. Place these in the `models/animate_diff_mlx/` directory. Please see detailed instructions in `models/animate_diff_mlx/README.md`.
+    *   **Critical: Implement `mlx_animate_diff_utils.py`:** The file `backend/mlx_animate_diff_utils.py` currently contains **placeholder classes**. **You MUST replace its content with the actual Python class definition for the AnimateDiff Motion Module, its weight loading logic, and how it integrates with (or modifies) the base Stable Diffusion UNet.** The existing placeholders only simulate the structure.
+*   **Dependencies:** This typically relies on the same set of MLX and SD dependencies. `opencv-python` (already in `requirements.txt`) is used for compiling frames into the output video.
 
 ### 3. Audio Generation (TTS, Music, SFX)
 *   **Text-to-Speech:** Integrate Coqui TTS (or a similar lightweight model) into `/generate-speech`.
