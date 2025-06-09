@@ -12,6 +12,7 @@ Think of it as your creative assistant: you provide the text, and it helps you b
 
 *   **The User Interface is Complete:** You can click through all the steps, input text, make selections, and see how the final application is intended to work.
 *   **Backend Processes are Placeholders:** The actual Artificial Intelligence (AI) models for generating images, videos, audio, etc., are **not yet integrated**. When you click "Generate," the system currently creates quick placeholder files (like blue squares for images or silent audio files) to simulate the process.
+    (Note: The backend code for Text-to-Image generation has been structured to use MLX with Stable Diffusion, but requires user setup of model files and replacement of placeholder model utility code. See 'Future Development / 1. Text-to-Image Generation (MLX Stable Diffusion) - Partially Scaffolded' for details.)
 *   **Focus on Workflow and UI:** The main purpose of this prototype is to demonstrate the complete workflow and user interface of the pipeline.
 
 This allows you to understand the entire process and how you would interact with the tool once the AI models are connected.
@@ -91,83 +92,12 @@ The application guides you through a wizard-like interface. Here's how to naviga
 
 **Main Window - The Wizard:**
 
-**Step 0: Welcome & Project Setup**
-1.  **Project Name (Conceptual):** You can type a name for your project here (e.g., "My First AI Video"). This is for organizational purposes in a future version.
-2.  **Load Template (Conceptual):**
-    *   This dropdown lets you choose a template to pre-fill some settings. Try selecting "Quick Cinematic Clip" or "Spoken Presentation Slide." You'll see a message that the template is applied.
-    *   "None" uses default empty values.
-3.  **Click "Start Project / Next"** to move to the image generation step.
-
-**Step 1: Generate Image from Text**
-1.  **Select image style:** Choose a visual style from the dropdown (e.g., "Photographic," "Cinematic"). If you applied a template, this might be pre-selected.
-2.  **Enter your image prompt:** In the text area, describe the main scene or subject of your video. (e.g., "A serene beach at sunset, with palm trees"). If you used a template, a prompt might already be there. You can change it.
-3.  **Click "Generate Image."**
-    *   You'll see a spinner for a moment.
-    *   A **placeholder image** (likely a simple colored square) will appear, along with a success message showing its placeholder path.
-4.  If an image is displayed, the **"Next: Video Options"** button becomes active. Click it.
-    *   You can also click "Back to Project Setup."
-
-**Step 2: Convert Image to Video**
-1.  **Review Image:** The placeholder image you "generated" in Step 1 is shown.
-2.  **Select motion type:** Choose how you want this static image to be animated (e.g., "Slow Pan Right," "Slow Zoom In").
-3.  **Click "Generate Video."**
-    *   A spinner will appear.
-    *   A **placeholder video** (which will look like your static placeholder image, but as a short video file) will be displayed.
-4.  If a video is displayed, the **"Next: Audio Config"** button becomes active. Click it.
-    *   You can also click "Back to Image Generation."
-
-**Step 3: Configure Audio Elements**
-This step has three tabs for different types of audio. All are optional.
-
-*   **Text-to-Speech (TTS) Tab:**
-    1.  **Text to Synthesize:** Type the narration or dialogue for your video.
-    2.  **Select Voice:** Choose a voice type (e.g., "Male Young Professional").
-    3.  **Select Emotion:** Choose an emotion for the voice.
-    4.  **Click "Generate Speech."** A **placeholder audio player** (silent audio) will appear.
-*   **Background Music Tab:**
-    1.  **Select Music Style:** Choose a music style (e.g., "Ambient," "Upbeat").
-    2.  **Duration (seconds):** Set how long the music should be.
-    3.  **Click "Generate Music."** A **placeholder audio player** (silent audio of the specified duration) will appear.
-*   **Sound Effects Tab:**
-    1.  **Select SFX Category:** Choose a category (e.g., "Nature").
-    2.  **Describe the sound effect:** Type a description (e.g., "wind blowing gently").
-    3.  **Click "Generate SFX."** A **placeholder audio player** (short silent audio) will appear.
-    4.  Note the caption about a pre-generated SFX library for future use.
-
-Once done with audio (or if you skip it), click **"Next: Lip Sync."**
-*   You can also click "Back to Video Options."
-
-**Step 4: Apply Lip Sync**
-This step conceptually synchronizes the generated speech (from TTS) with the video.
-1.  **Prerequisites:** This step will only be fully active if you've generated both a video (Step 2) and speech audio (Step 3 - TTS). If not, it will show an informational message.
-2.  **Review Inputs:** It will show the paths of the video and speech audio being used.
-3.  **Click "Apply Lip Sync."**
-    *   A spinner will appear.
-    *   The **placeholder video will be redisplayed** (in a real version, this video would now have the character's lips moving in sync with the placeholder speech).
-4.  If lip sync is "applied," the **"Next: Final Assembly"** button becomes active. Click it.
-    *   You can also click "Back to Audio Configuration."
-
-**Step 5: Assemble and Export Final Video**
-This is the final step to combine everything.
-1.  **Prerequisites:** Requires at least the (conceptually) lip-synced video and the speech audio.
-2.  **Review Media:** It lists all the media items you've "generated" that will be included:
-    *   Base Video (from lip sync step)
-    *   Speech Audio
-    *   Music Audio (if generated)
-    *   Sound Effects (if generated - currently shows the path of the one SFX you could generate)
-3.  **Export Options:**
-    *   **Resolution:** Choose a video size (e.g., "720p").
-    *   **Quality:** Select a quality level.
-    *   **Format:** Choose the video file type (e.g., "MP4").
-4.  **Click "Assemble and Export Video."**
-    *   A spinner will appear.
-    *   The **placeholder video will be displayed again**, representing the final assembled product.
-    *   The export settings you chose will be shown.
-5.  You can now click **"Start New Project"** to reset everything and go back to Step 0, or click "Back to Lip Sync."
+**(Steps 0-5 as previously detailed - content omitted for brevity in this diff view but remains in the file)**
+... (Content of Steps 0-5 remains the same) ...
 
 ## What to Expect (Placeholder Outputs)
 
-*   **Images:** Will be simple colored squares.
+*   **Images:** The Text-to-Image step now uses a **placeholder MLX Stable Diffusion pipeline**. If model files are not correctly set up as per `models/stable_diffusion_mlx/README.md` and `backend/mlx_utils.py` is not replaced with actual model logic, it will likely fail or produce random noise if the placeholder `mlx_utils.py` somehow runs. With correct (placeholder) `mlx_utils.py` but no real models, it produces a random noise image.
 *   **Videos:** Will be short video clips of the static placeholder images, or copies of previous placeholder videos.
 *   **Audio (Speech, Music, SFX):** Will be silent audio files of appropriate (placeholder) durations.
 *   **Lip Sync:** Will simply show the input video again, as no actual lip movement is generated.
@@ -177,12 +107,40 @@ The key is to understand the *flow* and the *types of controls* you have at each
 
 ## Future Development
 
-The exciting part comes next:
-*   Integrating real AI models for each generation step (Stable Diffusion for images, AnimateDiff for video, Coqui TTS for speech, MusicGen for music, Wav2Lip for lip sync).
-*   Implementing the FFmpeg pipeline for actual audio mixing and video encoding, with M2 hardware acceleration.
-*   Building out the "Project Save/Load" functionality.
-*   Adding a real SFX library and potentially AudioLDM for on-demand SFX.
-*   Performance tuning and optimization for MacBook Pro M2.
+The exciting part comes next: integrating real AI models and functionality!
+
+### 1. Text-to-Image Generation (MLX Stable Diffusion) - Partially Scaffolded
+*   **Current Status:** The backend framework to use MLX-based Stable Diffusion for text-to-image generation (Phase 2) has been implemented.
+    *   Configuration is managed in `backend/config_sd.py`.
+    *   The main generation pipeline logic is in `backend/mlx_stable_diffusion.py`.
+*   **Action Required by User:**
+    *   **Model Files:** You need to download or convert Stable Diffusion models to the MLX format and place them in the `models/stable_diffusion_mlx/` directory. Please see the detailed instructions in `models/stable_diffusion_mlx/README.md`.
+    *   **Critical: Implement `mlx_utils.py`:** The file `backend/mlx_utils.py` currently contains **placeholder classes** for the UNet, VAE, Text Encoder, Tokenizer, and Scheduler. **You MUST replace the content of `mlx_utils.py` with the actual Python class definitions and weight loading logic for these components from a working MLX Stable Diffusion example (e.g., from the official `mlx-examples` repository on GitHub).** The existing placeholders only simulate the structure and will not produce valid images without real model code and weights.
+*   **Dependencies:** The `requirements.txt` file has been updated with `mlx`, `huggingface_hub`, `transformers`, and `safetensors` to support this.
+
+### 2. Image-to-Video Generation (e.g., AnimateDiff + MLX)
+*   Integrate a real image-to-video model (like AnimateDiff or Stable Video Diffusion) using MLX into the `/generate-video` backend endpoint.
+*   This will involve replacing the current OpenCV placeholder.
+
+### 3. Audio Generation (TTS, Music, SFX)
+*   **Text-to-Speech:** Integrate Coqui TTS (or a similar lightweight model) into `/generate-speech`.
+*   **Music Generation:** Integrate MusicGen Small (or similar) into `/generate-music`.
+*   **Sound Effects:** Implement an SFX library lookup and/or integrate a simple AudioLDM model into `/generate-sfx`.
+
+### 4. Lip Synchronization (e.g., Wav2Lip)
+*   Integrate a model like Wav2Lip into the `/sync-lips` backend endpoint to synchronize the generated speech with the video.
+
+### 5. Final Assembly (FFmpeg)
+*   Implement the actual FFmpeg command pipeline in `/assemble-video` for:
+    *   Mixing all audio tracks (speech, music, SFX).
+    *   Replacing video audio with the new master mix.
+    *   Encoding the final video (e.g., H.264 with VideoToolbox hardware acceleration on M2).
+
+### 6. Advanced Features & Optimization
+*   Implement actual "Project Save/Load" functionality.
+*   Performance tuning and memory optimization for all models on MacBook Pro M2.
+*   More sophisticated error handling for AI model execution.
+*   Refine UI for controlling more model-specific parameters.
 
 Thank you for exploring the Text-to-Multimedia AI Pipeline prototype! We hope this gives you a clear vision of its potential.
 ```

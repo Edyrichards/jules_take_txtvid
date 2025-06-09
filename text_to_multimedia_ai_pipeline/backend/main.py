@@ -24,33 +24,78 @@ class ImagePrompt(BaseModel):
 GENERATED_IMAGES_DIR_SERVER = os.path.join(PROJECT_ROOT_DIR, "data/generated_images")
 os.makedirs(GENERATED_IMAGES_DIR_SERVER, exist_ok=True)
 
+# New imports for MLX Stable Diffusion
+from . import config_sd as mlx_config_sd # Alias to avoid conflict if main.py had its own config_sd
+from . import mlx_stable_diffusion
+import time # Already imported but ensure it's used
+
 @app.post("/generate-image")
 async def generate_image(prompt_data: ImagePrompt):
     prompt = prompt_data.prompt
-    print(f"Received prompt: {prompt}")
+    # Example negative prompt, could be configurable
+    negative_prompt = "low quality, blurry, noisy, text, watermark, signature, ugly, deformed"
+
+    print(f"Received prompt for MLX Stable Diffusion: '{prompt}'")
+    print(f"Using negative prompt: '{negative_prompt}'")
+
     try:
-        img = Image.new('RGB', (512, 512), color = 'blue')
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
-        img_byte_arr.seek(0)
-        image_filename = "placeholder_image.png"
-        image_path_on_server = os.path.join(GENERATED_IMAGES_DIR_SERVER, image_filename)
-        with open(image_path_on_server, "wb") as f:
-            f.write(img_byte_arr.getvalue())
-        print(f"Placeholder image saved to {image_path_on_server}")
+        start_time_gen = time.time()
+
+        # Call the MLX Stable Diffusion generation function
+        pil_image = mlx_stable_diffusion.generate_image_with_mlx(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            # num_steps and guidance_scale will use defaults from config_sd via mlx_stable_diffusion.py
+        )
+
+        end_time_gen = time.time()
+        generation_time = end_time_gen - start_time_gen
+        print(f"MLX Stable Diffusion image generated in {generation_time:.2f} seconds (actual or placeholder timing).")
+
+        # Save the PIL image to a file
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        sane_prompt = "".join(c if c.isalnum() else "_" for c in prompt[:30]).rstrip("_")
+        image_filename = f"sd_image_{sane_prompt}_{timestamp}.{mlx_config_sd.OUTPUT_IMAGE_FORMAT.lower()}"
+
+        image_path_server = os.path.join(GENERATED_IMAGES_DIR_SERVER, image_filename)
+        image_path_client = os.path.join("data/generated_images", image_filename)
+
+        pil_image.save(image_path_server, format=mlx_config_sd.OUTPUT_IMAGE_FORMAT)
+        print(f"Generated image saved to: {image_path_server}")
+
+        # --- Upscaling Placeholder (as before) ---
         print("Placeholder: Upscaling would be applied here (e.g., with Real-ESRGAN) if an upscaler was integrated.")
         upscaling_status_message = "pending_integration"
-        base_resolution = "512x512"
-        client_accessible_image_path = os.path.join("data/generated_images", image_filename)
+        base_resolution = f"{pil_image.width}x{pil_image.height}"
+        # --- End of Upscaling Placeholder ---
+
         return {
-            "message": "Image generated successfully (placeholder)",
-            "image_path": client_accessible_image_path,
+            "message": f"Image generated successfully with MLX Stable Diffusion in {generation_time:.2f}s.",
+            "image_path": image_path_client,
             "resolution": base_resolution,
-            "upscaling_status": upscaling_status_message
+            "upscaling_status": upscaling_status_message,
+            "prompt_used": prompt,
+            "negative_prompt_used": negative_prompt,
+            "generation_time_seconds": round(generation_time, 2)
         }
+    except FileNotFoundError as fnf_error:
+        print(f"Model FileNotFoundError in /generate-image: {fnf_error}")
+        # This error is specifically for model files not found by mlx_stable_diffusion.ensure_models_loaded()
+        raise HTTPException(status_code=500, detail=f"Model files not found. Please check server logs and ensure models are correctly placed as per 'models/stable_diffusion_mlx/README.md'. Error: {fnf_error}")
+    except RuntimeError as e:
+        # Catch potential MLX/MPS runtime errors
+        print(f"RuntimeError in /generate-image: {e}")
+        import traceback
+        traceback.print_exc()
+        error_detail = str(e)
+        if "MPS" in error_detail or "mlx" in error_detail or "metal" in error_detail.lower():
+            error_detail = "An error occurred with the MLX/MPS (Apple Silicon GPU) backend during image generation. This could be due to model compatibility, memory issues, or driver problems. Check server logs for details."
+        raise HTTPException(status_code=500, detail=error_detail)
     except Exception as e:
-        print(f"Error generating placeholder image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error in image generation: {str(e)}")
+        print(f"General Exception in /generate-image: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during image generation: {str(e)}")
 
 class VideoRequest(BaseModel):
     image_path: str
